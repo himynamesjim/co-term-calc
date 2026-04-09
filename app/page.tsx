@@ -5,6 +5,7 @@ import { CheckCircle2, Calendar, FileText, Mail, Minus, Plus, Download, Trash2, 
 import { PaywallModal } from '@/components/paywall-modal';
 import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { AuthModal } from '@/components/auth-modal';
+import { LandingPage } from '@/components/landing-page';
 import { supabase, getCurrentUser, signOut, isSupabaseConfigured, getSessionToken } from '@/lib/supabase';
 import { generateCoTermPDF } from '@/lib/pdf-generator';
 import { generateCoTermEmail, generateCoTermEmailText } from '@/lib/email-generator';
@@ -1190,6 +1191,23 @@ export default function CoTermCalcPage() {
     }
     return true;
   };
+
+  // Show landing page for non-logged-in users
+  if (!user && !isLoading) {
+    return (
+      <>
+        <LandingPage onGetStarted={() => setShowAuthModal(true)} />
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={async () => {
+            const currentUser = await getCurrentUser();
+            setUser(currentUser);
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="dark bg-slate-950" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
