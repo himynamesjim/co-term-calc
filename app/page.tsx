@@ -1173,11 +1173,8 @@ export default function CoTermCalcPage() {
       <>
         <PaywallModal
           isOpen={true}
-          builderName="Co-Term Calculator"
-          requiredTier="professional"
-          reason={isDesignLimitReached ? 'design_limit' : 'trial_expired'}
-          designsCreated={designsCreated}
-          designLimit={designLimit}
+          onClose={() => {}}
+          reason={isDesignLimitReached ? `Design limit reached (${designsCreated}/${designLimit})` : 'Trial expired - upgrade to professional tier'}
         />
       </>
     );
@@ -4137,11 +4134,7 @@ export default function CoTermCalcPage() {
         <PaywallModal
           isOpen={showPaywall}
           onClose={() => setShowPaywall(false)}
-          builderName="Co-Term Calculator"
-          requiredTier="professional"
-          reason="not_logged_in"
-          designsCreated={designsCreated}
-          designLimit={designLimit}
+          reason="Please sign in to use the Co-Term Calculator"
         />
       )}
 
