@@ -7,7 +7,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, designData, designType = 'coterm-calc', userId } = body;
+    const { title, designData, designType = 'coterm-calc', userId, projectId } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -37,12 +37,19 @@ export async function POST(request: NextRequest) {
 
     if (existing && !fetchError) {
       // Update existing design
+      const updateData: any = {
+        design_data: designData,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update project_id if provided (allow null to remove from project)
+      if (projectId !== undefined) {
+        updateData.project_id = projectId;
+      }
+
       const { data, error } = await supabase
         .from('coterm_calculations')
-        .update({
-          design_data: designData,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
         .select()
         .single();
@@ -56,14 +63,21 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new design
+      const insertData: any = {
+        user_id: userId,
+        title: title || 'Untitled Co-Term Calculation',
+        design_type: designType,
+        design_data: designData,
+      };
+
+      // Add project_id if provided
+      if (projectId) {
+        insertData.project_id = projectId;
+      }
+
       const { data, error } = await supabase
         .from('coterm_calculations')
-        .insert({
-          user_id: userId,
-          title: title || 'Untitled Co-Term Calculation',
-          design_type: designType,
-          design_data: designData,
-        })
+        .insert(insertData)
         .select()
         .single();
 
