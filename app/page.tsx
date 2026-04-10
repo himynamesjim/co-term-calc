@@ -1618,9 +1618,8 @@ export default function CoTermCalcPage() {
                       </div>
                     );
                   })}
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
