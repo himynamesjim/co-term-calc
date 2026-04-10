@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, Calendar, FileText, Mail, Minus, Plus, Download, Trash2, Calculator, Edit2, Save, RefreshCw, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, MessageSquare, Send, X, Info, LogOut, FolderOpen } from 'lucide-react';
+import { CheckCircle2, Calendar, FileText, Mail, Minus, Plus, Download, Trash2, Calculator, Edit2, Save, RefreshCw, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, MessageSquare, Send, X, Info, LogOut, FolderOpen, FolderPlus } from 'lucide-react';
 import { PaywallModal } from '@/components/paywall-modal';
 import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { AuthModal } from '@/components/auth-modal';
 import { LandingPage } from '@/components/landing-page';
+import { NewProjectModal } from '@/components/new-project-modal';
 import { supabase, getCurrentUser, signOut, isSupabaseConfigured, getSessionToken } from '@/lib/supabase';
 import { generateCoTermPDF } from '@/lib/pdf-generator';
 import { generateCoTermEmail, generateCoTermEmailText } from '@/lib/email-generator';
@@ -166,6 +167,12 @@ export default function CoTermCalcPage() {
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [selectedCalcForDetail, setSelectedCalcForDetail] = useState<any | null>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+
+  // Projects/Folders
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
 
   // Step 1: Agreement Info
   const [projectName, setProjectName] = useState('');
@@ -373,6 +380,33 @@ export default function CoTermCalcPage() {
     };
 
     fetchSavedDesigns();
+  }, [user]);
+
+  // Fetch projects when user logs in
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!user) {
+        setProjects([]);
+        return;
+      }
+
+      try {
+        const token = await getSessionToken();
+        const response = await fetch('/api/projects', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProjects(data.projects || []);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+
+    fetchProjects();
   }, [user]);
 
   // Auto-save effect
@@ -1044,7 +1078,8 @@ export default function CoTermCalcPage() {
           title: projectName,
           designData,
           designType: 'coterm-calc',
-          userId: user.id
+          userId: user.id,
+          projectId: selectedProjectId
         })
       });
 
@@ -1395,9 +1430,54 @@ export default function CoTermCalcPage() {
                   No saved calculations yet
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {savedDesigns.map((design) => {
-                    const isHovering = hoveredCardId === design.id;
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Calculations grouped by projects */}
+                  {projects.map(project => {
+                    const projectCalcs = savedDesigns.filter(d => d.project_id === project.id);
+                    if (projectCalcs.length === 0) return null;
+                    const isCollapsed = collapsedProjects.has(project.id);
+
+                    return (
+                      <div key={project.id}>
+                        {/* Project Header */}
+                        <div
+                          onClick={() => {
+                            const newCollapsed = new Set(collapsedProjects);
+                            if (isCollapsed) {
+                              newCollapsed.delete(project.id);
+                            } else {
+                              newCollapsed.add(project.id);
+                            }
+                            setCollapsedProjects(newCollapsed);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 10px",
+                            borderLeft: `3px solid ${project.color}`,
+                            background: "rgba(255,255,255,0.04)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            marginBottom: isCollapsed ? "0" : "8px",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                          <FolderOpen size={14} style={{ color: project.color }} />
+                          <span style={{ fontWeight: "600", fontSize: "12px", color: "#e2e8f0", flex: 1 }}>
+                            {project.name}
+                          </span>
+                          <span style={{ fontSize: "11px", color: "#64748b" }}>
+                            ({projectCalcs.length})
+                          </span>
+                        </div>
+
+                        {/* Project Calculations */}
+                        {!isCollapsed && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "12px" }}>
+                            {projectCalcs.map((design) => {
+                              const isHovering = hoveredCardId === design.id;
 
                     return (
                       <div
@@ -1453,6 +1533,7 @@ export default function CoTermCalcPage() {
                                   setManualMonthsRemaining(data.manualMonthsRemaining || 12);
                                   setAddExtension(data.addExtension || false);
                                   setExtensionMonths(data.extensionMonths || 12);
+                                  setSelectedProjectId(design.project_id || null);
                                 }
                                 setSelectedCalcForDetail(null);
                                 setCurrentStep(1);
@@ -1537,6 +1618,171 @@ export default function CoTermCalcPage() {
                       </div>
                     );
                   })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Uncategorized Calculations */}
+                  {savedDesigns.filter(d => !d.project_id).length > 0 && (
+                    <div>
+                      <div style={{
+                        padding: "8px 10px",
+                        color: "#64748b",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        marginBottom: "8px"
+                      }}>
+                        Uncategorized
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "12px" }}>
+                        {savedDesigns.filter(d => !d.project_id).map((design) => {
+                          const isHovering = hoveredCardId === design.id;
+
+                          return (
+                            <div
+                              key={design.id}
+                              style={{
+                                padding: "12px",
+                                background: isHovering ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+                                border: "1px solid rgba(255,255,255,0.06)",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                transition: "all 0.2s",
+                                position: "relative"
+                              }}
+                              onMouseEnter={() => setHoveredCardId(design.id)}
+                              onMouseLeave={() => setHoveredCardId(null)}
+                              onClick={() => {
+                                setSelectedCalcForDetail(design);
+                              }}
+                            >
+                              <div style={{ fontSize: "13px", fontWeight: "600", color: "#e2e8f0", marginBottom: "4px", paddingRight: isHovering ? "60px" : "0", transition: "padding 0.2s" }}>
+                                {design.title}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                {new Date(design.updated_at).toLocaleDateString()}
+                              </div>
+
+                              {/* Hover Actions */}
+                              {isHovering && (
+                                <div style={{
+                                  position: "absolute",
+                                  top: "8px",
+                                  right: "8px",
+                                  display: "flex",
+                                  gap: "4px",
+                                  background: "rgba(15, 23, 42, 0.95)",
+                                  padding: "4px",
+                                  borderRadius: "6px",
+                                  border: "1px solid rgba(255,255,255,0.1)"
+                                }}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const data = design.design_data;
+                                      if (data) {
+                                        setProjectName(data.projectName || '');
+                                        setAgreementStartDate(data.agreementStartDate || '');
+                                        setAgreementTermMonths(data.agreementTermMonths || 36);
+                                        setCoTermStartDate(data.coTermStartDate || '');
+                                        setLicenses(data.licenses || []);
+                                        setBillingTerm(data.billingTerm || 'Annual');
+                                        setNumberOfLineItems(data.numberOfLineItems || 1);
+                                        setUseCalculatedMonths(data.useCalculatedMonths ?? true);
+                                        setManualMonthsRemaining(data.manualMonthsRemaining || 12);
+                                        setAddExtension(data.addExtension || false);
+                                        setExtensionMonths(data.extensionMonths || 12);
+                                        setSelectedProjectId(design.project_id || null);
+                                      }
+                                      setSelectedCalcForDetail(null);
+                                      setCurrentStep(1);
+                                    }}
+                                    style={{
+                                      padding: "4px 6px",
+                                      background: "rgba(59, 130, 246, 0.1)",
+                                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                                      borderRadius: "4px",
+                                      color: "#60a5fa",
+                                      cursor: "pointer",
+                                      fontSize: "11px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                      transition: "all 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.1)";
+                                    }}
+                                    title="Edit calculation"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!confirm('Are you sure you want to delete this calculation?')) return;
+
+                                      try {
+                                        const token = await getSessionToken();
+                                        const response = await fetch('/api/delete-design', {
+                                          method: 'DELETE',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            ...(token && { 'Authorization': `Bearer ${token}` })
+                                          },
+                                          body: JSON.stringify({ design_id: design.id })
+                                        });
+
+                                        if (response.ok) {
+                                          setSavedDesigns(savedDesigns.filter(d => d.id !== design.id));
+                                          if (selectedCalcForDetail?.id === design.id) {
+                                            setSelectedCalcForDetail(null);
+                                          }
+                                        } else {
+                                          alert('Failed to delete calculation');
+                                        }
+                                      } catch (error) {
+                                        console.error('Delete error:', error);
+                                        alert('Failed to delete calculation');
+                                      }
+                                    }}
+                                    style={{
+                                      padding: "4px 6px",
+                                      background: "rgba(239, 68, 68, 0.1)",
+                                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                                      borderRadius: "4px",
+                                      color: "#f87171",
+                                      cursor: "pointer",
+                                      fontSize: "11px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                      transition: "all 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                                    }}
+                                    title="Delete calculation"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1784,6 +2030,7 @@ export default function CoTermCalcPage() {
                         setManualMonthsRemaining(data.manualMonthsRemaining || 12);
                         setAddExtension(data.addExtension || false);
                         setExtensionMonths(data.extensionMonths || 12);
+                        setSelectedProjectId(selectedCalcForDetail.project_id || null);
                       }
                       setSelectedCalcForDetail(null);
                       setCurrentStep(1);
@@ -2156,6 +2403,40 @@ export default function CoTermCalcPage() {
                 </div>
               )}
             </div>
+
+            {/* Project/Folder Selector */}
+            {user && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Project/Folder (Optional):
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedProjectId || ''}
+                    onChange={(e) => setSelectedProjectId(e.target.value || null)}
+                    className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">No Project</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        📁 {project.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjectModal(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <FolderPlus size={16} />
+                    New
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  💡 Organize your calculations by client, project, or quarter
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
@@ -4178,6 +4459,16 @@ export default function CoTermCalcPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => {
           // User will be set automatically via auth state listener
+        }}
+      />
+
+      {/* New Project Modal */}
+      <NewProjectModal
+        isOpen={showNewProjectModal}
+        onClose={() => setShowNewProjectModal(false)}
+        onProjectCreated={(newProject) => {
+          setProjects([newProject, ...projects]);
+          setSelectedProjectId(newProject.id);
         }}
       />
     </div>
