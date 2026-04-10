@@ -2127,10 +2127,16 @@ export default function CoTermCalcPage() {
 
             {/* Project Name */}
             <div className="mb-6">
-              <div className="mb-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   Co-Term Project Name:
                 </label>
+                {user && (
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                    <Save size={12} />
+                    Required to save
+                  </span>
+                )}
               </div>
               <input
                 type="text"
@@ -2142,6 +2148,11 @@ export default function CoTermCalcPage() {
                 placeholder="Enter project name (e.g., Q1 2025 Renewal)"
                 className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              {user && !projectName.trim() && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  💡 Tip: Give your calculation a name so you can save and find it later
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -3712,46 +3723,68 @@ export default function CoTermCalcPage() {
           </div>
 
           {/* Save Button */}
-          <button
-            onClick={handleManualSave}
-            disabled={isSaving || !projectName.trim() || !user}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              background: isSaving || !projectName.trim() || !user
-                ? 'rgba(255, 255, 255, 0.2)'
-                : 'rgba(255, 255, 255, 0.95)',
-              color: isSaving || !projectName.trim() || !user
-                ? 'rgba(255, 255, 255, 0.5)'
-                : '#1e40af',
-              border: 'none',
-              borderRadius: '50px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: isSaving || !projectName.trim() || !user ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-            }}
-            onMouseEnter={(e) => {
-              if (!isSaving && projectName.trim() && user) {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isSaving && projectName.trim() && user) {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-              }
-            }}
-          >
-            <Save style={{ width: '18px', height: '18px' }} />
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={handleManualSave}
+              disabled={isSaving || !projectName.trim() || !user}
+              title={!projectName.trim() ? 'Enter a project name in Step 1 to save' : !user ? 'Login required to save' : 'Save calculation'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                background: isSaving || !projectName.trim() || !user
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(255, 255, 255, 0.95)',
+                color: isSaving || !projectName.trim() || !user
+                  ? 'rgba(255, 255, 255, 0.5)'
+                  : '#1e40af',
+                border: 'none',
+                borderRadius: '50px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: isSaving || !projectName.trim() || !user ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isSaving && projectName.trim() && user) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSaving && projectName.trim() && user) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }
+              }}
+            >
+              <Save style={{ width: '18px', height: '18px' }} />
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            {!projectName.trim() && user && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: '0',
+                marginTop: '8px',
+                padding: '8px 12px',
+                background: '#ef4444',
+                color: 'white',
+                fontSize: '12px',
+                borderRadius: '8px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                zIndex: 1000,
+                animation: 'fadeIn 0.2s ease-in'
+              }}>
+                ⚠️ Add a project name in Step 1 to save
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Resize Handle - Right */}
