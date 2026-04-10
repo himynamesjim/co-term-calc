@@ -2149,9 +2149,11 @@ export default function CoTermCalcPage() {
                 className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {user && !projectName.trim() && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  💡 Tip: Give your calculation a name so you can save and find it later
-                </p>
+                <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-700 dark:text-red-400 font-medium">
+                    ⚠️ Project name required to save your calculation
+                  </p>
+                </div>
               )}
             </div>
 
@@ -3765,25 +3767,6 @@ export default function CoTermCalcPage() {
               <Save style={{ width: '18px', height: '18px' }} />
               {isSaving ? 'Saving...' : 'Save'}
             </button>
-            {!projectName.trim() && user && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: '0',
-                marginTop: '8px',
-                padding: '8px 12px',
-                background: '#ef4444',
-                color: 'white',
-                fontSize: '12px',
-                borderRadius: '8px',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                zIndex: 1000,
-                animation: 'fadeIn 0.2s ease-in'
-              }}>
-                ⚠️ Add a project name in Step 1 to save
-              </div>
-            )}
           </div>
         </div>
 
