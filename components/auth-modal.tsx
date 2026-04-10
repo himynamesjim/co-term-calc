@@ -12,7 +12,9 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const recaptcha = useGoogleReCaptcha();
+  const executeRecaptcha = recaptcha?.executeRecaptcha;
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,26 +29,31 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setLoading(true);
 
     try {
-      // Execute reCAPTCHA only for sign-up
+      // Execute reCAPTCHA only for sign-up and if available
       if (isSignUp && executeRecaptcha) {
-        const token = await executeRecaptcha('signup');
+        try {
+          const token = await executeRecaptcha('signup');
 
-        // Verify the token on the server
-        const verifyResponse = await fetch('/api/verify-recaptcha', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
+          // Verify the token on the server
+          const verifyResponse = await fetch('/api/verify-recaptcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          });
 
-        const verifyResult = await verifyResponse.json();
+          const verifyResult = await verifyResponse.json();
 
-        if (!verifyResult.success) {
-          throw new Error('reCAPTCHA verification failed. Please try again.');
-        }
+          if (!verifyResult.success) {
+            throw new Error('reCAPTCHA verification failed. Please try again.');
+          }
 
-        // Score should be above 0.5 (0.0 = bot, 1.0 = human)
-        if (verifyResult.score < 0.5) {
-          throw new Error('Security check failed. Please contact support if you believe this is an error.');
+          // Score should be above 0.5 (0.0 = bot, 1.0 = human)
+          if (verifyResult.score < 0.5) {
+            throw new Error('Security check failed. Please contact support if you believe this is an error.');
+          }
+        } catch (recaptchaError) {
+          console.warn('reCAPTCHA error (continuing anyway):', recaptchaError);
+          // Continue with sign-up even if reCAPTCHA fails
         }
       }
 
